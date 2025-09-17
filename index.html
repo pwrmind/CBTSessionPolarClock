@@ -13,6 +13,22 @@
         }
         .current-stage {
             box-shadow: 0 0 0 3px #3b82f6;
+            background-color: #f0f9ff;
+        }
+        .hint-icon {
+            transition: all 0.3s ease;
+        }
+        .hint-icon:hover {
+            transform: scale(1.1);
+            color: #3b82f6;
+        }
+        .hint-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+        .hint-content.show {
+            max-height: 300px;
         }
     </style>
 </head>
@@ -66,17 +82,26 @@
             <div class="space-y-6">
                 <div v-for="(stage, index) in stages" :key="index"
                      class="p-4 rounded-lg border border-gray-200 transition-all"
-                     :class="{'current-stage bg-blue-50': currentStageIndex === index}">
+                     :class="{'current-stage': currentStageIndex === index}">
                     <div class="flex justify-between items-center mb-2">
                         <div class="font-medium flex items-center">
                             <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-800 flex items-center justify-center mr-2 text-sm">{{ index + 1 }}</span>
                             {{ stage.name }}
+                            <button @click="toggleHint(index)" class="ml-2 text-gray-400 hint-icon">
+                                <i class="fas fa-question-circle"></i>
+                            </button>
                         </div>
                         <div class="text-sm text-gray-600">
                             {{ formatTime(stage.duration) }}
                         </div>
                     </div>
-                    <div class="w-full bg-gray-200 rounded-full h-3">
+                    
+                    <!-- Hint Content -->
+                    <div class="hint-content mt-2 bg-blue-50 p-3 rounded-lg" :class="{'show': stage.showHint}">
+                        <div class="text-sm text-blue-800" v-html="stage.hint"></div>
+                    </div>
+                    
+                    <div class="w-full bg-gray-200 rounded-full h-3 mt-3">
                         <div class="stage-progress h-3 rounded-full" 
                              :class="[currentStageIndex === index ? 'bg-blue-600' : (index < currentStageIndex ? 'bg-green-500' : 'bg-gray-300')]"
                              :style="{ width: stageProgress(index) + '%' }"></div>
@@ -100,16 +125,64 @@
                 const isRunning = ref(false);
                 const timer = ref(null);
                 
-                // Этапы сессии КПТ
+                // Этапы сессии КПТ с подсказками
                 const stages = ref([
-                    { name: 'Проверка настроения/медикаментов', duration: 300, color: 'bg-blue-200' },
-                    { name: 'Составление повестки', duration: 300, color: 'bg-blue-300' },
-                    { name: 'Обзор плана действий', duration: 300, color: 'bg-blue-400' },
-                    { name: 'Обсуждение повестки', duration: 1200, color: 'bg-green-400' },
-                    { name: 'Промежуточные итоги', duration: 300, color: 'bg-green-500' },
-                    { name: 'Финальные итоги', duration: 240, color: 'bg-orange-400' },
-                    { name: 'Новый план действий', duration: 240, color: 'bg-orange-500' },
-                    { name: 'Обратная связь', duration: 120, color: 'bg-orange-600' }
+                    { 
+                        name: 'Проверка настроения/медикаментов', 
+                        duration: 300, 
+                        color: 'bg-blue-200',
+                        hint: 'Используйте шкалы самооценки (например, Шкалу депрессии Бека) для оценки текущего состояния клиента. Уточните, принимает ли клиент назначенные медикаменты и нет ли побочных эффектов. Отслеживание динамики помогает оценить прогресс и при необходимости скорректировать лечение.',
+                        showHint: false
+                    },
+                    { 
+                        name: 'Составление повестки', 
+                        duration: 300, 
+                        color: 'bg-blue-300',
+                        hint: 'Совместно с клиентом определите приоритетные темы для обсуждения. Повестка должна быть конкретной и реалистичной. Учитывайте как текущие проблемы, так и долгосрочные цели терапии. Это повышает эффективность сессии и вовлеченность клиента.',
+                        showHint: false
+                    },
+                    { 
+                        name: 'Обзор плана действий', 
+                        duration: 300, 
+                        color: 'bg-blue-400',
+                        hint: 'Обсудите выполнение домашнего задания, выявите успехи и трудности. Если задание не выполнено, исследуйте причины вместе с клиентом без осуждения. Это помогает понять препятствия и адаптировать будущие задания для повышения вероятности их выполнения.',
+                        showHint: false
+                    },
+                    { 
+                        name: 'Обсуждение повестки', 
+                        duration: 1200, 
+                        color: 'bg-green-400',
+                        hint: 'Основная часть сессии. Используйте когнитивные техники для выявления и оценки автоматических мыслей, поведенческие эксперименты и решение проблем. Сосредоточьтесь на 1-2 ключевых темах, чтобы проработать их глубоко, а не поверхностно касаться многих вопросов.',
+                        showHint: false
+                    },
+                    { 
+                        name: 'Промежуточные итоги', 
+                        duration: 300, 
+                        color: 'bg-green-500',
+                        hint: 'Кратко резюмируйте ключевые моменты обсуждения. Убедитесь, что клиент понимает основные выводы и связь между мыслями, эмоциями и поведением. Это укрепляет learning и помогает клиенту интегрировать новые perspectives.',
+                        showHint: false
+                    },
+                    { 
+                        name: 'Финальные итоги', 
+                        duration: 240, 
+                        color: 'bg-orange-400',
+                        hint: 'Подведите итоги всей сессии, выделите наиболее важные insights. Попросите клиента сформулировать основные выводы своими словами - это повышает усвоение материала. Убедитесь, что клиент четко понимает, что он вынес из сессии.',
+                        showHint: false
+                    },
+                    { 
+                        name: 'Новый план действий', 
+                        duration: 240, 
+                        color: 'bg-orange-500',
+                        hint: 'Совместно разработайте конкретные, измеримые и реалистичные задания на следующую неделю. Учитывайте потенциальные препятствия и разработайте стратегии их преодоления. Задание должно быть связано с целями терапии и практическим применением навыков, полученных на сессии.',
+                        showHint: false
+                    },
+                    { 
+                        name: 'Обратная связь', 
+                        duration: 120, 
+                        color: 'bg-orange-600',
+                        hint: 'Запросите feedback о сессии - что было полезным, что можно улучшить. Это укрепляет терапевтический альянс и позволяет адаптировать терапию под потребности клиента. Проявите genuine интерес к мнению клиента и будьте открыты к конструктивной критике.',
+                        showHint: false
+                    }
                 ]);
                 
                 // Вычисляемые свойства
@@ -175,6 +248,10 @@
                 const resetTimer = () => {
                     pauseTimer();
                     currentTime.value = 0;
+                    // Скрыть все подсказки при сбросе
+                    stages.value.forEach(stage => {
+                        stage.showHint = false;
+                    });
                 };
                 
                 const stageProgress = (index) => {
@@ -206,6 +283,10 @@
                     }
                 };
                 
+                const toggleHint = (index) => {
+                    stages.value[index].showHint = !stages.value[index].showHint;
+                };
+                
                 // Автоматическая очистка таймера при уничтожении компонента
                 onUnmounted(() => {
                     clearInterval(timer.value);
@@ -225,7 +306,8 @@
                     pauseTimer,
                     resetTimer,
                     stageProgress,
-                    stageProgressText
+                    stageProgressText,
+                    toggleHint
                 };
             }
         }).mount('#app');
